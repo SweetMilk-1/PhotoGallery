@@ -1,4 +1,4 @@
-package com.example.photogallery
+package com.example.photogallery.features.galleryPhoto
 
 import android.view.LayoutInflater
 import android.view.ViewGroup

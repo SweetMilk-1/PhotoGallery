@@ -1,14 +1,13 @@
-package com.example.photogallery
+package com.example.photogallery.features.galleryPhoto
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.switchMap
 import com.example.photogallery.api.FlickrFetcher
-import com.example.photogallery.api.model.PagedGallery.GalleryItem
 import com.example.photogallery.api.model.PagedGallery.PagedGalleryResponse
 
-class MainActivityViewModel : ViewModel() {
+class GalleryPhotoFragmentViewModel : ViewModel() {
 
     private val flickrFetcher: FlickrFetcher = FlickrFetcher(object:FlickrFetcher.Callbacks {
         override fun onStart() {
