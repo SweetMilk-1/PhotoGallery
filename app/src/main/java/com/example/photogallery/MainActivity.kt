@@ -8,6 +8,7 @@ import androidx.core.view.isVisible
 import androidx.recyclerview.widget.GridLayoutManager
 import com.example.photogallery.databinding.ActivityMainBinding
 
+//git test 
 private const val LOG_TAG = "MainActivity"
 
 private const val SPAN_SIZE = 450
