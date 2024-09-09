@@ -17,7 +17,7 @@ import androidx.recyclerview.widget.RecyclerView.Adapter
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import com.example.photogallery.R
 import com.example.photogallery.api.ThumbnailDownloader
-import com.example.photogallery.api.model.PagedGallery.GalleryItem
+import com.example.photogallery.api.model.galleryMetadataRequest.GalleryItem
 import com.example.photogallery.databinding.FragmentGalleryPhotoBinding
 import com.example.photogallery.databinding.GalleryItemHolderBinding
 import kotlin.math.max
@@ -71,9 +71,9 @@ class GalleryPhotoFragment : Fragment() {
                 gridLayoutManager.spanCount = display.width / SPAN_SIZE
             }
 
-            viewModel.photosLiveData.observe(viewLifecycleOwner) { pagedGallery ->
+            viewModel.photosMetadata.observe(viewLifecycleOwner) { pagedGallery ->
                 if (pagedGallery != null) {
-                    adapter = GalleryAdapter(pagedGallery.galleryItems)
+                    adapter = GalleryAdapter(pagedGallery.thumbnails)
 
                     binding.nextButton.visibility =
                         if (pagedGallery.page != pagedGallery.pages) View.VISIBLE else View.INVISIBLE
@@ -135,15 +135,13 @@ class GalleryPhotoFragment : Fragment() {
                     android.R.drawable.ic_menu_camera
                 ) ?: ColorDrawable()
             holder.bindDrawable(placeholder)
-            val preloadList = mutableListOf<String>()
-            for (i in max(position - 10, 0)..<position) {
-                preloadList.add(galleryItems[i].url)
-            }
 
-            for (i in (position + 1)..<min(position + 10, galleryItems.size)) {
-                preloadList.add(galleryItems[i].url)
-            }
-            thumbnailDownloader.queueThumbnail(Pair(holder, galleryItem.url), preloadList)
+//            val preloadList = mutableListOf<String>()
+//            for (i in max(position - 10, 0)..<min(position + 10, galleryItems.size)) {
+//                preloadList.add(galleryItems[i].url)
+//            }
+
+            thumbnailDownloader.queueThumbnail(holder, galleryItem.url)
         }
 
         inner class GalleryItemViewHolder(binding: GalleryItemHolderBinding) :

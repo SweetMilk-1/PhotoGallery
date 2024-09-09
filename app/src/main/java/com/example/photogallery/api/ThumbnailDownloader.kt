@@ -9,19 +9,17 @@ import android.util.Log
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.LiveData
 import java.util.concurrent.ConcurrentHashMap
 
-private const val TAG = "ThumbnailDownloader"
-private const val LOG_TAG = "ThumbnailDownloaderLOG"
+private const val LOG_TAG = "ThumbnailDownloader"
+
 private const val MESSAGE_DOWNLOAD = 0
-private const val MESSAGE_PRELOAD = 1
 
 class ThumbnailDownloader<in T>(
     private val fragmentLifecycleOwner: LifecycleOwner,
     private val responseHandler : Handler,
     private val onThumbnailDownloaded: (T, Bitmap?) -> Unit
-) : HandlerThread(TAG) {
+) : HandlerThread(LOG_TAG) {
 
     private var hasQuit = false
     private lateinit var requestHandler: Handler
@@ -32,12 +30,12 @@ class ThumbnailDownloader<in T>(
         override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
             when (event) {
                 Lifecycle.Event.ON_CREATE -> {
-                    Log.d(LOG_TAG, "Setup ThumbnailDownloader")
+                    Log.d(LOG_TAG, "Start HandlerTread")
                     start()
                     looper
                 }
                 Lifecycle.Event.ON_DESTROY -> {
-                    Log.d(LOG_TAG, "tearDown ThumbnailDownloader")
+                    Log.d(LOG_TAG, "Quit HandlerTread")
 
                     fragmentLifecycleOwner.lifecycle.removeObserver(
                         this
@@ -77,12 +75,8 @@ class ThumbnailDownloader<in T>(
             override fun handleMessage(msg: Message) {
                 if (msg.what == MESSAGE_DOWNLOAD) {
                     val target = msg.obj as T
-                    Log.d(TAG, "Got a request for Url: ${requestMap[target]}")
+                    Log.d(LOG_TAG, "Got a request for Url: ${requestMap[target]}")
                     handleRequest(target)
-                }
-                if (msg.what == MESSAGE_PRELOAD) {
-                    val url = msg.obj as String
-                    preloadRequest(url)
                 }
             }
         }
@@ -102,21 +96,13 @@ class ThumbnailDownloader<in T>(
         }
     }
 
-    private fun preloadRequest(url: String) {
-        flickrFetcher.fetchPhotoImage(url)
-    }
-
     fun queueThumbnail(
-        mainImage: Pair<T, String>,
-        preloadList: List<String> = listOf()
-        ) {
-        Log.d(TAG, "Got request for download image from ${mainImage.first}")
-        requestMap[mainImage.first] = mainImage.second
-        requestHandler.obtainMessage(MESSAGE_DOWNLOAD, mainImage.first)
+        target: T,
+        url: String,
+    ) {
+        Log.d(LOG_TAG, "Got request for download image from $target")
+        requestMap[target] = url
+        requestHandler.obtainMessage(MESSAGE_DOWNLOAD, target)
             .sendToTarget()
-        for (req in preloadList) {
-            requestHandler.obtainMessage(MESSAGE_PRELOAD, req)
-                .sendToTarget()
-        }
     }
 }

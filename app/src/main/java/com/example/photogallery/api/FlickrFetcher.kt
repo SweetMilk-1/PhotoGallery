@@ -2,20 +2,15 @@ package com.example.photogallery.api
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.net.Uri
 import android.util.Log
 import android.util.LruCache
 import androidx.annotation.WorkerThread
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.example.photogallery.api.model.PagedGallery.PagedGalleryResponse
-import com.example.photogallery.api.model.PagedGallery.PagedGalleryResponseDeserializer
-import com.google.gson.GsonBuilder
+import com.example.photogallery.api.model.galleryMetadataRequest.GalleryMetadata
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 
 private const val LOG_TAG = "FlickrFetcher"
 
@@ -28,49 +23,29 @@ class FlickrFetcher(
         fun onFinish()
     }
 
-    private val flickrApi: FlickrApi // TODO add DI in project
-    private val lruCache = LruCache<String, Bitmap>(CACHE_SIZE)
+    private val flickrApi: FlickrApi = FlickrApiFactory.create() // TODO add DI in project
 
-    private var getPhotosCall: Call<PagedGalleryResponse>? = null
+    private var fetchGalleryMetadataCall: Call<GalleryMetadata>? = null
 
-    init {
-        val gson = GsonBuilder()
-            .registerTypeAdapter(
-                PagedGalleryResponse::class.java,
-                PagedGalleryResponseDeserializer()
-            )
-            .create()
-
-        val retrofit = Retrofit.Builder()
-            .baseUrl("https://api.flickr.com/")
-            .addConverterFactory(GsonConverterFactory.create(gson))
-            .build()
-
-        flickrApi = retrofit.create(FlickrApi::class.java)
-    }
-
-    fun fetchPhotoInfo(page: Int): LiveData<PagedGalleryResponse?> {
+    fun fetchPhotosMetadata(page: Int): LiveData<GalleryMetadata?> {
         callbacks?.onStart()
-        val photoLiveData = MutableLiveData<PagedGalleryResponse?>(null)
 
-        getPhotosCall = flickrApi.fetchPhotosInfo(page)
-        getPhotosCall?.enqueue(object : Callback<PagedGalleryResponse> {
+        val photoLiveData = MutableLiveData<GalleryMetadata?>(null)
+
+        fetchGalleryMetadataCall = flickrApi.fetchGalleryMetadata(page)
+        fetchGalleryMetadataCall?.enqueue(object : Callback<GalleryMetadata> {
             override fun onResponse(
-                request: Call<PagedGalleryResponse>,
-                response: Response<PagedGalleryResponse>
+                request: Call<GalleryMetadata>,
+                response: Response<GalleryMetadata>
             ) {
                 val pagedGallery = response.body()
-
-                pagedGallery?.galleryItems = pagedGallery?.galleryItems?.filter {
-                    it.url.isNotBlank()
-                } ?: listOf()
-
                 photoLiveData.value = pagedGallery
-                getPhotosCall = null
+
+                fetchGalleryMetadataCall = null
                 callbacks?.onFinish()
             }
 
-            override fun onFailure(request: Call<PagedGalleryResponse>, ex: Throwable) {
+            override fun onFailure(request: Call<GalleryMetadata>, ex: Throwable) {
                 Log.e(LOG_TAG, "Could not loading data in FlickrFetcher", ex)
                 callbacks?.onFinish()
             }
@@ -81,30 +56,24 @@ class FlickrFetcher(
 
     @WorkerThread
     fun fetchPhotoImage(url: String): Bitmap? {
-        synchronized (lruCache) {
-            if (lruCache[url] != null) {
-                return lruCache[url]
-            }
+        val cacheValue = FlickrImageCache.getImage(url)
+        if (cacheValue != null)
+        {
+            return cacheValue
         }
-
         val response = flickrApi.fetchPhotoImage(url).execute()
         val bitmap = response.body()?.byteStream()?.use(BitmapFactory::decodeStream)
         Log.d(LOG_TAG, "Decoded bitmap=$bitmap from response=$response")
 
-        synchronized (lruCache) {
-            lruCache.put(url, bitmap)
-        }
+        FlickrImageCache.putImage(url, bitmap)
 
         return bitmap
     }
 
     fun cancelRequests() {
-        getPhotosCall?.cancel()
+        fetchGalleryMetadataCall?.cancel()
         Log.d(LOG_TAG, "All requests has been cancelled")
-        callbacks?.onFinish()
-    }
 
-    companion object {
-        private const val CACHE_SIZE = 4 * 1024 * 1024 //4 MiB
+        callbacks?.onFinish()
     }
 }
