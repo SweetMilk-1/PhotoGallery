@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">PhotoGallery</string>
     <string name="pages">Page %1$d of %2$d</string>
+    <string name="default_page_string">Page 0 of 0</string>
 </resources>

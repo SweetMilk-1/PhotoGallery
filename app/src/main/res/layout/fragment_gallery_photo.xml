@@ -34,7 +34,8 @@
             android:layout_margin="4dp"
             android:src="@drawable/arrow_left"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
+            app:layout_constraintStart_toStartOf="parent"
+            android:visibility="invisible"/>
 
         <ImageButton
             android:id="@+id/next_button"
@@ -43,13 +44,14 @@
             android:layout_margin="4dp"
             android:src="@drawable/arrow_right"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintEnd_toEndOf="parent"
+            android:visibility="invisible"/>
 
         <TextView
             android:id="@+id/page_text_view"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="pages"
+            android:text="@string/default_page_string"
             app:layout_constraintEnd_toStartOf="@id/next_button"
             app:layout_constraintStart_toEndOf="@id/prev_button"
             app:layout_constraintTop_toTopOf="parent"

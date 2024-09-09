@@ -1,6 +1,9 @@
 package com.example.photogallery.api
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.util.Log
+import androidx.annotation.WorkerThread
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.example.photogallery.api.model.PagedGallery.PagedGalleryResponse
@@ -18,7 +21,7 @@ class FlickrFetcher(
     val callbacks: Callbacks? = null
 ) {
 
-    interface Callbacks{
+    interface Callbacks {
         fun onStart()
         fun onFinish()
     }
@@ -43,11 +46,11 @@ class FlickrFetcher(
         flickrApi = retrofit.create(FlickrApi::class.java)
     }
 
-    fun getPhoto(page: Int): LiveData<PagedGalleryResponse?> {
+    fun fetchPhotoInfo(page: Int): LiveData<PagedGalleryResponse?> {
         callbacks?.onStart()
         val photoLiveData = MutableLiveData<PagedGalleryResponse?>(null)
 
-        getPhotosCall = flickrApi.getPhoto(page)
+        getPhotosCall = flickrApi.fetchPhotosInfo(page)
         getPhotosCall?.enqueue(object : Callback<PagedGalleryResponse> {
             override fun onResponse(
                 request: Call<PagedGalleryResponse>,
@@ -71,6 +74,14 @@ class FlickrFetcher(
         })
 
         return photoLiveData
+    }
+
+    @WorkerThread
+    fun fetchPhotoImage(url: String): Bitmap? {
+        val response = flickrApi.fetchPhotoImage(url).execute()
+        val bitmap = response.body()?.byteStream()?.use(BitmapFactory::decodeStream)
+        Log.d(LOG_TAG, "Decoded bitmap=$bitmap from response=$response")
+        return bitmap
     }
 
     fun cancelRequests() {

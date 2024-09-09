@@ -25,7 +25,7 @@ class GalleryPhotoFragmentViewModel : ViewModel() {
     val isProgressBarVisible: LiveData<Boolean> = _isProgressBarVisible
 
     val photosLiveData: LiveData<PagedGalleryResponse?> = _currentPage.switchMap { page ->
-        flickrFetcher.getPhoto(page)
+        flickrFetcher.fetchPhotoInfo(page)
     }
 
     fun nextPage() {

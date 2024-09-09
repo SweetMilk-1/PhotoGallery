@@ -1,14 +1,8 @@
 package com.example.photogallery
 
 import android.os.Bundle
-import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.isVisible
-import androidx.recyclerview.widget.GridLayoutManager
-import com.example.photogallery.databinding.ActivityMainBinding
-import com.example.photogallery.features.galleryPhoto.GalleryAdapter
 import com.example.photogallery.features.galleryPhoto.GalleryPhotoFragment
-import com.example.photogallery.features.galleryPhoto.GalleryPhotoFragmentViewModel
 
 //git test
 private const val LOG_TAG = "MainActivity"
