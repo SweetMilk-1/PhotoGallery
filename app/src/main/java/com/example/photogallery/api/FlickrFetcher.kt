@@ -2,7 +2,9 @@ package com.example.photogallery.api
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.util.Log
+import android.util.LruCache
 import androidx.annotation.WorkerThread
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -27,6 +29,7 @@ class FlickrFetcher(
     }
 
     private val flickrApi: FlickrApi // TODO add DI in project
+    private val lruCache = LruCache<String, Bitmap>(CACHE_SIZE)
 
     private var getPhotosCall: Call<PagedGalleryResponse>? = null
 
@@ -78,9 +81,20 @@ class FlickrFetcher(
 
     @WorkerThread
     fun fetchPhotoImage(url: String): Bitmap? {
+        synchronized (lruCache) {
+            if (lruCache[url] != null) {
+                return lruCache[url]
+            }
+        }
+
         val response = flickrApi.fetchPhotoImage(url).execute()
         val bitmap = response.body()?.byteStream()?.use(BitmapFactory::decodeStream)
         Log.d(LOG_TAG, "Decoded bitmap=$bitmap from response=$response")
+
+        synchronized (lruCache) {
+            lruCache.put(url, bitmap)
+        }
+
         return bitmap
     }
 
@@ -88,5 +102,9 @@ class FlickrFetcher(
         getPhotosCall?.cancel()
         Log.d(LOG_TAG, "All requests has been cancelled")
         callbacks?.onFinish()
+    }
+
+    companion object {
+        private const val CACHE_SIZE = 4 * 1024 * 1024 //4 MiB
     }
 }

@@ -9,30 +9,40 @@ import android.util.Log
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LiveData
 import java.util.concurrent.ConcurrentHashMap
 
 private const val TAG = "ThumbnailDownloader"
+private const val LOG_TAG = "ThumbnailDownloaderLOG"
 private const val MESSAGE_DOWNLOAD = 0
+private const val MESSAGE_PRELOAD = 1
 
 class ThumbnailDownloader<in T>(
+    private val fragmentLifecycleOwner: LifecycleOwner,
     private val responseHandler : Handler,
     private val onThumbnailDownloaded: (T, Bitmap?) -> Unit
 ) : HandlerThread(TAG) {
+
     private var hasQuit = false
     private lateinit var requestHandler: Handler
     private val requestMap: ConcurrentHashMap<T, String> = ConcurrentHashMap()
     private val flickrFetcher = FlickrFetcher()
 
-    val fragmentLifecycleEventObserver = object :LifecycleEventObserver {
+    private val fragmentLifecycleEventObserver = object :LifecycleEventObserver {
         override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
             when (event) {
                 Lifecycle.Event.ON_CREATE -> {
-                    Log.d(TAG, "Setup ThumbnailDownloader")
+                    Log.d(LOG_TAG, "Setup ThumbnailDownloader")
                     start()
                     looper
                 }
                 Lifecycle.Event.ON_DESTROY -> {
-                    Log.d(TAG, "tearDown ThumbnailDownloader")
+                    Log.d(LOG_TAG, "tearDown ThumbnailDownloader")
+
+                    fragmentLifecycleOwner.lifecycle.removeObserver(
+                        this
+                    )
+                    clearQueue()
                     quit()
                 }
                 else -> {}
@@ -40,20 +50,23 @@ class ThumbnailDownloader<in T>(
         }
     }
 
-    val viewLifecycleEventObserver = object : LifecycleEventObserver {
-        override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
-            when (event) {
-                Lifecycle.Event.ON_DESTROY -> {
-                    requestHandler.removeMessages(MESSAGE_DOWNLOAD)
-                    requestMap.clear()
-                }
-                else -> {}
-            }
-        }
+    fun clearQueue() {
+        requestHandler.removeMessages(MESSAGE_DOWNLOAD)
+        requestMap.clear()
+        Log.d(LOG_TAG, "Queue was cleared")
+    }
+
+    init {
+        Log.d(LOG_TAG, "Add observers into fragmentLifecycleOwner and viewLifecycleOwner")
+        fragmentLifecycleOwner.lifecycle.addObserver(
+            fragmentLifecycleEventObserver
+        )
     }
 
     override fun quit(): Boolean {
         hasQuit = true
+        requestHandler.removeMessages(MESSAGE_DOWNLOAD)
+        requestMap.clear()
         return super.quit()
     }
 
@@ -66,6 +79,10 @@ class ThumbnailDownloader<in T>(
                     val target = msg.obj as T
                     Log.d(TAG, "Got a request for Url: ${requestMap[target]}")
                     handleRequest(target)
+                }
+                if (msg.what == MESSAGE_PRELOAD) {
+                    val url = msg.obj as String
+                    preloadRequest(url)
                 }
             }
         }
@@ -85,10 +102,21 @@ class ThumbnailDownloader<in T>(
         }
     }
 
-    fun queueThumbnail(target: T, url: String) {
-        Log.d(TAG, "Got request for download image from $url")
-        requestMap[target] = url
-        requestHandler.obtainMessage(MESSAGE_DOWNLOAD, target)
+    private fun preloadRequest(url: String) {
+        flickrFetcher.fetchPhotoImage(url)
+    }
+
+    fun queueThumbnail(
+        mainImage: Pair<T, String>,
+        preloadList: List<String> = listOf()
+        ) {
+        Log.d(TAG, "Got request for download image from ${mainImage.first}")
+        requestMap[mainImage.first] = mainImage.second
+        requestHandler.obtainMessage(MESSAGE_DOWNLOAD, mainImage.first)
             .sendToTarget()
+        for (req in preloadList) {
+            requestHandler.obtainMessage(MESSAGE_PRELOAD, req)
+                .sendToTarget()
+        }
     }
 }

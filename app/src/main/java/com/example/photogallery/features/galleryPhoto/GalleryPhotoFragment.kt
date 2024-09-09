@@ -1,6 +1,5 @@
 package com.example.photogallery.features.galleryPhoto
 
-import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.os.Bundle
@@ -8,9 +7,7 @@ import android.os.Handler
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
-import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -23,6 +20,8 @@ import com.example.photogallery.api.ThumbnailDownloader
 import com.example.photogallery.api.model.PagedGallery.GalleryItem
 import com.example.photogallery.databinding.FragmentGalleryPhotoBinding
 import com.example.photogallery.databinding.GalleryItemHolderBinding
+import kotlin.math.max
+import kotlin.math.min
 
 
 private const val SPAN_SIZE = 300
@@ -41,16 +40,16 @@ class GalleryPhotoFragment : Fragment() {
         retainInstance = true
 
         val responseHandler = Handler()
-        thumbnailDownloader = ThumbnailDownloader(responseHandler) { holder, bitmap ->
+        thumbnailDownloader = ThumbnailDownloader(
+            this,
+            responseHandler
+        )
+        { holder, bitmap ->
             if (bitmap == null)
                 return@ThumbnailDownloader
             val drawable = bitmap.toDrawable(resources)
             holder.bindDrawable(drawable)
         }
-
-        lifecycle.addObserver(
-            thumbnailDownloader.fragmentLifecycleEventObserver
-        )
     }
 
     override fun onCreateView(
@@ -58,10 +57,6 @@ class GalleryPhotoFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        viewLifecycleOwner.lifecycle.addObserver(
-            thumbnailDownloader.viewLifecycleEventObserver
-        )
-
         binding = FragmentGalleryPhotoBinding.inflate(layoutInflater)
         return binding.root
     }
@@ -107,16 +102,7 @@ class GalleryPhotoFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        viewLifecycleOwner.lifecycle.removeObserver(
-            thumbnailDownloader.viewLifecycleEventObserver
-        )
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        lifecycle.removeObserver(
-            thumbnailDownloader.fragmentLifecycleEventObserver
-        )
+        thumbnailDownloader.clearQueue()
     }
 
     companion object {
@@ -149,7 +135,15 @@ class GalleryPhotoFragment : Fragment() {
                     android.R.drawable.ic_menu_camera
                 ) ?: ColorDrawable()
             holder.bindDrawable(placeholder)
-            thumbnailDownloader.queueThumbnail(holder, galleryItem.url)
+            val preloadList = mutableListOf<String>()
+            for (i in max(position - 10, 0)..<position) {
+                preloadList.add(galleryItems[i].url)
+            }
+
+            for (i in (position + 1)..<min(position + 10, galleryItems.size)) {
+                preloadList.add(galleryItems[i].url)
+            }
+            thumbnailDownloader.queueThumbnail(Pair(holder, galleryItem.url), preloadList)
         }
 
         inner class GalleryItemViewHolder(binding: GalleryItemHolderBinding) :
