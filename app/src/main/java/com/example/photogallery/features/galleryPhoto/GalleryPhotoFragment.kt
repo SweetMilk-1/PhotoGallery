@@ -26,6 +26,7 @@ import kotlin.math.min
 
 private const val SPAN_SIZE = 300
 private const val DEFAULT_SPAN_COUNT = 3
+private const val PRELOAD_SIZE = 10
 
 class GalleryPhotoFragment : Fragment() {
 
@@ -136,12 +137,14 @@ class GalleryPhotoFragment : Fragment() {
                 ) ?: ColorDrawable()
             holder.bindDrawable(placeholder)
 
-//            val preloadList = mutableListOf<String>()
-//            for (i in max(position - 10, 0)..<min(position + 10, galleryItems.size)) {
-//                preloadList.add(galleryItems[i].url)
-//            }
+            thumbnailDownloader.queueThumbnailForShow(holder, galleryItem.url)
 
-            thumbnailDownloader.queueThumbnail(holder, galleryItem.url)
+            val listForPreload = galleryItems.subList(
+                max(position - PRELOAD_SIZE, 0),
+                min(position + PRELOAD_SIZE, galleryItems.size - 1)
+            )
+                .map { it.url }
+            thumbnailDownloader.queueThumbnailsForPreload(listForPreload)
         }
 
         inner class GalleryItemViewHolder(binding: GalleryItemHolderBinding) :

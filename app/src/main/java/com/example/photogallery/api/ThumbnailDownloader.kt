@@ -13,7 +13,8 @@ import java.util.concurrent.ConcurrentHashMap
 
 private const val LOG_TAG = "ThumbnailDownloader"
 
-private const val MESSAGE_DOWNLOAD = 0
+private const val MESSAGE_DOWNLOAD_FOR_SHOW = 0
+private const val MESSAGE_DOWNLOAD_FOR_PRELOAD = 1
 
 class ThumbnailDownloader<in T>(
     private val fragmentLifecycleOwner: LifecycleOwner,
@@ -32,7 +33,6 @@ class ThumbnailDownloader<in T>(
                 Lifecycle.Event.ON_CREATE -> {
                     Log.d(LOG_TAG, "Start HandlerTread")
                     start()
-                    looper
                 }
                 Lifecycle.Event.ON_DESTROY -> {
                     Log.d(LOG_TAG, "Quit HandlerTread")
@@ -49,7 +49,8 @@ class ThumbnailDownloader<in T>(
     }
 
     fun clearQueue() {
-        requestHandler.removeMessages(MESSAGE_DOWNLOAD)
+        requestHandler.removeMessages(MESSAGE_DOWNLOAD_FOR_PRELOAD)
+        requestHandler.removeMessages(MESSAGE_DOWNLOAD_FOR_SHOW)
         requestMap.clear()
         Log.d(LOG_TAG, "Queue was cleared")
     }
@@ -63,8 +64,6 @@ class ThumbnailDownloader<in T>(
 
     override fun quit(): Boolean {
         hasQuit = true
-        requestHandler.removeMessages(MESSAGE_DOWNLOAD)
-        requestMap.clear()
         return super.quit()
     }
 
@@ -73,16 +72,23 @@ class ThumbnailDownloader<in T>(
     override fun onLooperPrepared() {
         requestHandler = object : Handler() {
             override fun handleMessage(msg: Message) {
-                if (msg.what == MESSAGE_DOWNLOAD) {
-                    val target = msg.obj as T
-                    Log.d(LOG_TAG, "Got a request for Url: ${requestMap[target]}")
-                    handleRequest(target)
+                when (msg.what) {
+                    MESSAGE_DOWNLOAD_FOR_SHOW -> {
+                        val target = msg.obj as T
+                        Log.d(LOG_TAG, "Got a request for Url: ${requestMap[target]}")
+                        handleRequestForShow(target)
+                    }
+                    MESSAGE_DOWNLOAD_FOR_PRELOAD -> {
+                        val url = msg.obj as String
+                        Log.d(LOG_TAG, "Got a request for Url (Preload): $url")
+                        handleRequestForPreload(url)
+                    }
                 }
             }
         }
     }
 
-    private fun handleRequest(target: T) {
+    private fun handleRequestForShow(target: T) {
         val url = requestMap[target] ?: return
         val bitmap = flickrFetcher.fetchPhotoImage(url)
 
@@ -96,13 +102,30 @@ class ThumbnailDownloader<in T>(
         }
     }
 
-    fun queueThumbnail(
+    private fun handleRequestForPreload(url: String) {
+        flickrFetcher.fetchPhotoImage(url)
+    }
+
+    fun queueThumbnailForShow(
         target: T,
         url: String,
     ) {
         Log.d(LOG_TAG, "Got request for download image from $target")
         requestMap[target] = url
-        requestHandler.obtainMessage(MESSAGE_DOWNLOAD, target)
+        requestHandler.obtainMessage(MESSAGE_DOWNLOAD_FOR_SHOW, target)
             .sendToTarget()
+    }
+
+    private fun queueOneThumbnailForPreload(
+        url: String,
+    ) {
+        Log.d(LOG_TAG, "Got request for download image (preload) for Url: $url")
+        requestHandler.obtainMessage(MESSAGE_DOWNLOAD_FOR_PRELOAD, url)
+            .sendToTarget()
+    }
+
+    fun queueThumbnailsForPreload(urls: List<String>) {
+        for (url in urls)
+            queueOneThumbnailForPreload(url)
     }
 }
