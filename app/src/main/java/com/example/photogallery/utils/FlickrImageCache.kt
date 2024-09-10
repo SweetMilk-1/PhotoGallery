@@ -1,4 +1,4 @@
-package com.example.photogallery.api
+package com.example.photogallery.utils
 
 import android.graphics.Bitmap
 
