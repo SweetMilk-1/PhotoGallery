@@ -1,5 +1,7 @@
 package com.example.photogallery
 
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.example.photogallery.features.galleryPhoto.GalleryPhotoFragment
@@ -23,6 +25,12 @@ class MainActivity : AppCompatActivity() {
                 .add(R.id.fragment_container, galleryPhotoFragment)
                 .addToBackStack(null)
                 .commit()
+        }
+    }
+
+    companion object {
+        fun newIntent(context: Context) :Intent {
+            return Intent(context, MainActivity::class.java)
         }
     }
 }

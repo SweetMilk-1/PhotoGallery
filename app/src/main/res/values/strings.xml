@@ -4,4 +4,9 @@
     <string name="default_page_string">Page 0 of 0</string>
     <string name="search">Search</string>
     <string name="clear_search">Clear search</string>
+    <string name="notification_channel_name">FlickrFetcher</string>
+    <string name="new_picture_title">New PhotoGallery Pictures</string>
+    <string name="new_picture_text">You have new pictures!</string>
+    <string name="start_polling">Start polling</string>
+    <string name="stop_polling">Stop polling</string>
 </resources>

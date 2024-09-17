@@ -4,7 +4,6 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.switchMap
 import com.example.photogallery.api.FlickrFetcher
 import com.example.photogallery.api.model.galleryMetadataRequest.GalleryMetadata
@@ -45,7 +44,7 @@ class GalleryPhotoFragmentViewModel(private val app: Application) : AndroidViewM
     val photosMetadata: LiveData<GalleryMetadata?> =
         _getPhotoParameters.switchMap { getPhotoParameters ->
             if (getPhotoParameters.search.isBlank()) {
-                flickrFetcher.fetcthInterestingness(getPhotoParameters.page)
+                flickrFetcher.fetchInterestingness(getPhotoParameters.page)
             } else {
                 flickrFetcher.searchPhoto(getPhotoParameters.search, getPhotoParameters.page)
             }

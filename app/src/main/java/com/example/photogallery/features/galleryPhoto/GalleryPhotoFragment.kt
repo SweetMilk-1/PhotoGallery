@@ -1,6 +1,5 @@
 package com.example.photogallery.features.galleryPhoto
 
-import android.app.Activity
 import android.content.Context
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
@@ -25,11 +24,19 @@ import androidx.lifecycle.Lifecycle
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView.Adapter
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.example.photogallery.R
 import com.example.photogallery.api.ThumbnailDownloader
 import com.example.photogallery.api.model.galleryMetadataRequest.GalleryItem
 import com.example.photogallery.databinding.FragmentGalleryPhotoBinding
 import com.example.photogallery.databinding.GalleryItemHolderBinding
+import com.example.photogallery.utils.QueryPreferences
+import com.example.photogallery.workers.PollWorker
+import java.util.concurrent.TimeUnit
 import kotlin.math.max
 import kotlin.math.min
 
@@ -39,6 +46,8 @@ private const val DEFAULT_SPAN_COUNT = 3
 private const val PRELOAD_SIZE = 0
 
 private const val LOG_TAG = "GalleryPhotoFragment"
+private const val POLL_WORK = "POLL_WORK"
+
 
 class GalleryPhotoFragment : Fragment() {
 
@@ -87,7 +96,7 @@ class GalleryPhotoFragment : Fragment() {
 
             viewModel.photosMetadata.observe(viewLifecycleOwner) { pagedGallery ->
                 if (pagedGallery != null) {
-                    adapter = GalleryAdapter(pagedGallery.thumbnails)
+                    adapter = GalleryAdapter(pagedGallery.galleryItems)
 
                     binding.nextButton.visibility =
                         if (pagedGallery.page != pagedGallery.pages) View.VISIBLE else View.INVISIBLE
@@ -123,6 +132,7 @@ class GalleryPhotoFragment : Fragment() {
                     setOnQueryTextListener(object : SearchView.OnQueryTextListener {
                         override fun onQueryTextSubmit(query: String?): Boolean {
                             Log.d(LOG_TAG, "QueryTextSubmit: $query")
+                            searchView.onActionViewCollapsed()
                             hideKeyboard()
                             viewModel.setSearchText(query ?: "")
                             return true
@@ -134,16 +144,46 @@ class GalleryPhotoFragment : Fragment() {
                         }
                     })
 
-                    setOnSearchClickListener{
+                    setOnSearchClickListener {
                         setQuery(viewModel.searchText, false)
                     }
                 }
+
+                val toggleItem = menu.findItem(R.id.app_bar_toggle_polling)
+                val isPolling = QueryPreferences.isPolling(requireContext())
+                val title = if (isPolling) {
+                    R.string.stop_polling
+                } else {
+                    R.string.start_polling
+                }
+                toggleItem.setTitle(title)
             }
 
             override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
                 when (menuItem.itemId) {
                     R.id.app_bar_clear_search -> {
                         viewModel.setSearchText("")
+                        return true
+                    }
+
+                    R.id.app_bar_toggle_polling -> {
+                        val isPolling = QueryPreferences.isPolling(requireContext())
+                        if (isPolling) {
+                            WorkManager.getInstance().cancelUniqueWork(POLL_WORK)
+                            QueryPreferences.setPolling(requireContext(), false)
+                        } else {
+                            val constraints = Constraints.Builder()
+                                //.setRequiredNetworkType(NetworkType.UNMETERED)
+                                .build()
+                            val workRequest =
+                                PeriodicWorkRequestBuilder<PollWorker>(15, TimeUnit.MINUTES)
+                                    .setConstraints(constraints)
+                                    .build()
+                            WorkManager
+                                .getInstance()
+                                .enqueueUniquePeriodicWork(POLL_WORK, ExistingPeriodicWorkPolicy.KEEP, workRequest)
+                        }
+                        activity?.invalidateOptionsMenu()
                         return true
                     }
                 }
@@ -155,7 +195,8 @@ class GalleryPhotoFragment : Fragment() {
     fun hideKeyboard() {
         val view = requireActivity().findViewById<View>(android.R.id.content)
         if (view != null) {
-            val imm = requireActivity().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            val imm =
+                requireActivity().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
             imm.hideSoftInputFromWindow(view.windowToken, 0)
         }
     }

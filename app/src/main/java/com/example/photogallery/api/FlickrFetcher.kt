@@ -27,14 +27,20 @@ class FlickrFetcher(
 
     private var fetchGalleryMetadataCall: Call<GalleryMetadata>? = null
 
-    fun fetcthInterestingness(page: Int):LiveData<GalleryMetadata?>{
-        val call = flickrApi.fetchInterestingness(page)
-        return fetchGalleryMetadata(call)
+    fun fetchInterestingnessRequest(page: Int = 1): Call<GalleryMetadata> {
+        return flickrApi.fetchInterestingness(page)
     }
 
-    fun searchPhoto(text: String, page: Int):LiveData<GalleryMetadata?>{
-        val call = flickrApi.searchPhotos(text, page)
-        return fetchGalleryMetadata(call)
+    fun fetchInterestingness(page: Int): LiveData<GalleryMetadata?> {
+        return fetchGalleryMetadata(fetchInterestingnessRequest(page))
+    }
+
+    fun searchPhotoRequest(text: String, page: Int = 1): Call<GalleryMetadata> {
+        return flickrApi.searchPhotos(text, page)
+    }
+
+    fun searchPhoto(text: String, page: Int): LiveData<GalleryMetadata?> {
+        return fetchGalleryMetadata(searchPhotoRequest(text, page))
     }
 
     private fun fetchGalleryMetadata(call: Call<GalleryMetadata>): LiveData<GalleryMetadata?> {
@@ -50,7 +56,7 @@ class FlickrFetcher(
             ) {
                 val pagedGallery = response.body()
 
-                pagedGallery?.thumbnails = pagedGallery?.thumbnails?.filter {
+                pagedGallery?.galleryItems = pagedGallery?.galleryItems?.filter {
                     it.url?.isNotBlank() == true
                 } ?: listOf()
 
@@ -71,8 +77,7 @@ class FlickrFetcher(
     @WorkerThread
     fun fetchPhotoImage(url: String): Bitmap? {
         val cacheValue = FlickrImageCache.getImage(url)
-        if (cacheValue != null)
-        {
+        if (cacheValue != null) {
             return cacheValue
         }
         val response = flickrApi.fetchPhotoImage(url).execute()
