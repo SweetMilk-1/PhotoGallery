@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import com.example.photogallery.features.galleryPhoto.GalleryPhotoFragment
+import com.example.photogallery.galleryPhoto.GalleryPhotoFragment
 
 //git test
 private const val LOG_TAG = "MainActivity"

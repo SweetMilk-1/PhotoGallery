@@ -1,4 +1,4 @@
-package com.example.photogallery.features.galleryPhoto
+package com.example.photogallery.galleryPhoto
 
 import android.content.Context
 import android.graphics.drawable.ColorDrawable
@@ -15,10 +15,11 @@ import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.SearchView
+import androidx.browser.customtabs.CustomTabsIntent
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.MenuProvider
 import androidx.core.view.isVisible
-import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.recyclerview.widget.GridLayoutManager
@@ -27,9 +28,9 @@ import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.example.photogallery.PhotoPageActivity
 import com.example.photogallery.R
 import com.example.photogallery.VisibleFragment
 import com.example.photogallery.api.ThumbnailDownloader
@@ -183,7 +184,11 @@ class GalleryPhotoFragment : VisibleFragment() {
                                     .build()
                             WorkManager
                                 .getInstance()
-                                .enqueueUniquePeriodicWork(POLL_WORK, ExistingPeriodicWorkPolicy.KEEP, workRequest)
+                                .enqueueUniquePeriodicWork(
+                                    POLL_WORK,
+                                    ExistingPeriodicWorkPolicy.KEEP,
+                                    workRequest
+                                )
                             QueryPreferences.setPolling(requireContext(), true)
                         }
                         activity?.invalidateOptionsMenu()
@@ -233,6 +238,7 @@ class GalleryPhotoFragment : VisibleFragment() {
 
         override fun onBindViewHolder(holder: GalleryItemViewHolder, position: Int) {
             val galleryItem = galleryItems[position]
+            holder.bindGalleryItem(galleryItem)
             val placeholder = AppCompatResources
                 .getDrawable(
                     requireContext(),
@@ -251,9 +257,32 @@ class GalleryPhotoFragment : VisibleFragment() {
         }
 
         inner class GalleryItemViewHolder(binding: GalleryItemHolderBinding) :
-            ViewHolder(binding.root) {
+            ViewHolder(binding.root), View.OnClickListener {
             val bindDrawable: (drawable: Drawable) -> Unit =
                 binding.photoImageView::setImageDrawable
+
+            private lateinit var galleryItem: GalleryItem
+
+            init {
+                itemView.setOnClickListener(this)
+            }
+
+            fun bindGalleryItem(galleryItem: GalleryItem) {
+                this.galleryItem = galleryItem
+            }
+
+            override fun onClick(v: View?) {
+                startActivity(
+                    PhotoPageActivity.newIntent(
+                        requireContext(),
+                        galleryItem.photoPageUri
+                    )
+                )
+//                CustomTabsIntent.Builder()
+//                    .setShowTitle(true)
+//                    .build()
+//                    .launchUrl(requireContext(), galleryItem.photoPageUri)
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-package com.example.photogallery.features.galleryPhoto
+package com.example.photogallery.galleryPhoto
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
@@ -26,10 +26,12 @@ class GalleryPhotoFragmentViewModel(private val app: Application) : AndroidViewM
         }
     })
 
-    private val _getPhotoParameters = MutableLiveData(GetPhotoParameters(
+    private val _getPhotoParameters = MutableLiveData(
+        GetPhotoParameters(
         1,
         QueryPreferences.getStoredQuery(app)
-    ))
+    )
+    )
     private val getPhotoParameters
         get() = _getPhotoParameters.value ?: GetPhotoParameters(1, "")
 

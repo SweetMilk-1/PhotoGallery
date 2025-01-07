@@ -33,5 +33,5 @@ dependencies {
     implementation(libs.gson)
     implementation(libs.converter.gson)
     implementation(libs.androidx.work.runtime.ktx)
-//    implementation(libs.work.runtime)
+    implementation ("androidx.browser:browser:1.8.0")
 }
