@@ -16,7 +16,6 @@ data class GetPhotoParameters(
 
 class GalleryPhotoFragmentViewModel(private val app: Application) : AndroidViewModel(app) {
 
-    //TODO DI
     private val flickrFetcher: FlickrFetcher = FlickrFetcher(object : FlickrFetcher.Callbacks {
         override fun onStart() {
             _isProgressBarVisible.value = true

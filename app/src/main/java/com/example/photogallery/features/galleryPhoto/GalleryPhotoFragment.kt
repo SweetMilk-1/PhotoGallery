@@ -26,10 +26,12 @@ import androidx.recyclerview.widget.RecyclerView.Adapter
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.photogallery.R
+import com.example.photogallery.VisibleFragment
 import com.example.photogallery.api.ThumbnailDownloader
 import com.example.photogallery.api.model.galleryMetadataRequest.GalleryItem
 import com.example.photogallery.databinding.FragmentGalleryPhotoBinding
@@ -49,7 +51,7 @@ private const val LOG_TAG = "GalleryPhotoFragment"
 private const val POLL_WORK = "POLL_WORK"
 
 
-class GalleryPhotoFragment : Fragment() {
+class GalleryPhotoFragment : VisibleFragment() {
 
     private val viewModel: GalleryPhotoFragmentViewModel by viewModels()
     private lateinit var binding: FragmentGalleryPhotoBinding
@@ -173,7 +175,7 @@ class GalleryPhotoFragment : Fragment() {
                             QueryPreferences.setPolling(requireContext(), false)
                         } else {
                             val constraints = Constraints.Builder()
-                                //.setRequiredNetworkType(NetworkType.UNMETERED)
+                                .setRequiredNetworkType(NetworkType.UNMETERED)
                                 .build()
                             val workRequest =
                                 PeriodicWorkRequestBuilder<PollWorker>(15, TimeUnit.MINUTES)
@@ -182,6 +184,7 @@ class GalleryPhotoFragment : Fragment() {
                             WorkManager
                                 .getInstance()
                                 .enqueueUniquePeriodicWork(POLL_WORK, ExistingPeriodicWorkPolicy.KEEP, workRequest)
+                            QueryPreferences.setPolling(requireContext(), true)
                         }
                         activity?.invalidateOptionsMenu()
                         return true

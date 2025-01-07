@@ -39,7 +39,7 @@ object QueryPreferences {
     fun setPolling(context: Context, isPolling: Boolean) {
         PreferenceManager.getDefaultSharedPreferences(context)
             .edit()
-            .putBoolean(PREF_LAST_RESULT_ID, isPolling)
+            .putBoolean(PREF_POLLING, isPolling)
             .apply()
     }
 }
